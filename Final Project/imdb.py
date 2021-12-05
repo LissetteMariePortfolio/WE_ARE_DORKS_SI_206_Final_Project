@@ -1,38 +1,99 @@
+import requests
+from bs4 import BeautifulSoup
+import sqlite3
+import plotly.graph_objects as go
+import pandas as pd
+
+URL = "https://www.imdb.com/search/title/?year=2021&title_type=feature&"
+MAX_COUNT=100
+LIMIT = 25
+
+def set_conn():
+    conn = sqlite3.connect('imdb.db') 
+    cursor = conn.cursor()
+    return conn, cursor
+
+def create_table():
+    conn,c = set_conn()
+    c.execute('''CREATE TABLE IF NOT EXISTS movies(id INT PRIMARY KEY, title TEXT, run_time TEXT, genre TEXT,rating REAL)''')
+    conn.commit()
+    conn.close()
+    return True
+
+def get_db_count():
+    conn,c = set_conn()
+    c.execute("SELECT COUNT(*) from movies")
+    return c.fetchone()[0]
+
+def add_to_database(title,genre,run_time,rating):
+    conn,c=set_conn()
+    st="""INSERT INTO movies(title,run_time,genre,rating) VALUES (?,?,?,?);"""
+    data=(title,genre,run_time,rating)
+    c.execute(st,data)
+    conn.commit()
+    conn.close()
+    return True
+
 def api_bs_setup():
-    #Access API / Set up access
-    #Set up database 
-    #Make cur object
-    #Make con object
-    #Set up soup
-    pass
+    page = requests.get(URL)
+    soup = BeautifulSoup(page.content, "html.parser")
+    return soup
+
 def access_api():
-    #Access API with connection
-    ##Store 100 items in the database from your API 
-    #Each time you execute the code you must only store 25 or fewer items, 
-    # run the code multiple times to get 100 items total processed
-    pass
+    soup=api_bs_setup()
+    res=soup.find(class_="lister-list")
+    db_count=get_db_count()
+    count=0
+
+    for movie in res.find_all(class_="lister-item"):
+        if db_count==MAX_COUNT:
+            return
+        if count==(db_count+LIMIT):
+            break
+        if count<=db_count and db_count!=0:
+            count+=1
+            continue
+        
+        count+=1
+        title=movie.find(class_="lister-item-content").find("a")
+        genre=movie.find(class_="genre")
+        r_time=movie.find(class_="runtime")
+        try:
+            rating=movie.find(class_="ratings-imdb-rating").find("strong").text.strip()
+        except:
+            rating=0
+        add_to_database(title.text.strip(),genre.text.strip(),r_time.text.strip(),rating)
+def get_data():
+  conn,c=set_conn()
+  c.execute("SELECT * FROM movies;")
+  return c.fetchall()
+  
 def calc_top_from_category():
-    #Combine 2 tables in video game
-    #With stored items, look at their genres
-    # Make dictionary of genres and how many items fall into each
-    # find the highest number, store in json, csv or text file
+    data=get_data()
+    genre={}
+    for movie in data:
+      genres=movie[2]
+      for gen in genres.split(", "):
+        if gen in genre:
+          genre[gen]+=1
+        else:
+          genre[gen]=1
+    return genre
+    
 
-    pass
+def make_plotly_graphic():
+    genre=calc_top_from_category()
+    fig = go.Figure(go.Bar(
+                y=list(genre.values()),
+                x=list(genre.keys()),
+                orientation='v'))
 
-def make_plotly_graphic(genre = "None"):
-    #Combine 2 tables in video game
-    #Using Plotly make graph visuals
-    #Try to make a different one, for now
-    #iTunes doing percentage pie of the different genres
-    #Steam: use scatter plot to find the average rating of a given genre
-    #iMDB: bar graph where you put ratings on the x axis (0-5) and how many 
-    #songs from a genre in your table have that info
+    fig.show()
 
-
-    pass
-
-#Tentative Deadline December 5th for code
-
+if __name__ == "__main__":
+  create_table()
+  access_api()
+  make_plotly_graphic()
 
 '''
 Notes:
