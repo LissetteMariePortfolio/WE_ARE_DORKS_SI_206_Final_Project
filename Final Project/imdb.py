@@ -4,7 +4,7 @@ import sqlite3
 import plotly.graph_objects as go
 import pandas as pd
 
-URL = "https://www.imdb.com/search/title/?year=2021&title_type=feature&"
+URLS = ["https://www.imdb.com/search/title/?year=2021&title_type=feature&","https://www.imdb.com/search/title/?title_type=feature&year=2021-01-01,2021-12-31&start=51&ref_=adv_nxt","https://www.imdb.com/search/title/?title_type=feature&year=2021-01-01,2021-12-31&start=51&ref_=adv_nxt"]
 MAX_COUNT=100
 LIMIT = 25
 
@@ -30,35 +30,30 @@ def add_to_database(title,genre,run_time,rating):
     conn.commit()
     conn.close()
     return True
-def api_bs_setup():
-    page = requests.get(URL)
+def api_bs_setup(url):
+    page = requests.get(url)
     soup = BeautifulSoup(page.content, "html.parser")
     return soup
 
 def access_api():
-    soup=api_bs_setup()
-    res=soup.find(class_="lister-list")
-    db_count=get_db_count()
-    count=0
-
-    for movie in res.find_all(class_="lister-item"):
-        if db_count==MAX_COUNT:
-            return
-        if count==(db_count+LIMIT):
-            break
-        if count<=db_count and db_count!=0:
-            count+=1
-            continue
-        
-        count+=1
-        title=movie.find(class_="lister-item-content").find("a")
-        genre=movie.find(class_="genre")
-        r_time=movie.find(class_="runtime")
-        try:
-            rating=movie.find(class_="ratings-imdb-rating").find("strong").text.strip()
-        except:
-            rating=0
-        add_to_database(title.text.strip(),genre.text.strip(),r_time.text.strip(),rating)
+    movies=[]
+    for url in URLS:
+        soup=api_bs_setup(url)
+        res=soup.find(class_="lister-list")
+        for movie in res.find_all(class_="lister-item"):
+            title=movie.find(class_="lister-item-content").find("a").text.strip()
+            genre=movie.find(class_="genre").text.strip()
+            r_t=movie.find(class_="runtime")
+            r_time= r_t.text.strip() if r_t else "0"
+            try:
+                rating=movie.find(class_="ratings-imdb-rating").find("strong").text.strip()
+            except:
+                rating=0
+            movies.append([title,genre,r_time,rating])
+    count=get_db_count()
+    end_count=count+LIMIT
+    for i in movies[count:end_count]:
+        add_to_database(*i)
 def get_data():
   conn,c=set_conn()
   c.execute("SELECT * FROM movies;")
@@ -91,15 +86,12 @@ def write_to_file():
         for movie in data.items():
             file.write(f"{movie[0]} {movie[1]}\n")
 
-
 def main():
     create_table()
     access_api()
     make_plotly_graphic()
     write_to_file()
+    
 if __name__ == "__main__":
+    print(f"Database count is: {get_db_count()}") #This prints the number of records in the database
     main()
-'''
-Notes:
-Need a commin column (medium?) in each table stating whether this is a game, song, or movie
-'''
