@@ -77,6 +77,16 @@ def make_plotly_graphic():
                 y=list(genre.values()),
                 x=list(genre.keys()),
                 orientation='v'))
+    fig.update_layout(
+    title="Comparison of Number of Upvotes Compared To Number Of Comments",
+    xaxis_title="Number of views",
+    yaxis_title="Movie Genre",
+    font=dict(
+            family="Courier New, monospace",
+            size=18,
+            color="#7f7f7f"
+    )
+)
 
     fig.show()
 
@@ -86,12 +96,12 @@ def write_to_file():
         for movie in data.items():
             file.write(f"{movie[0]} {movie[1]}\n")
 
+
 def main():
     create_table()
     access_api()
     make_plotly_graphic()
     write_to_file()
-    
 if __name__ == "__main__":
     print(f"Database count is: {get_db_count()}") #This prints the number of records in the database
     main()
