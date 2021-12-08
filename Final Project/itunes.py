@@ -1,4 +1,5 @@
 from pprint import pprint
+import csv
 import requests
 import sqlite3
 import json
@@ -77,6 +78,24 @@ def calc_top_from_category():
     
     data = cur.execute(query).fetchall()
     pprint (data)
+    return data
+
+def visualize(data):
+    x = []
+    y = []
+
+    for item in data:
+
+        y.append(item[0])
+        x.append(item[1])
+    
+    arr = np.array(y)
+
+    plt.pie (arr,autopct='%1.0f%%', pctdistance=1.1, labeldistance=1.2)
+    plt.tight_layout()
+    plt.legend(x, bbox_to_anchor=(-0.25,.75), loc = "center left")
+    plt.title('Distribution of Genres in iTunes Top 100')
+    plt.show()
 
 def db_fill_incremented():
     conn, cur = db_setup()
@@ -162,7 +181,7 @@ def main():
     db_setup()
     create_table()
     db_fill_incremented()
-    calc_top_from_category()
+    visualize(calc_top_from_category())
 
 
 if __name__ == "__main__":
