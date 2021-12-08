@@ -31,16 +31,10 @@ def data_grab_song(dataset):
     date_list = []
     genre_list = []
 
-    print (type(dataset))
-
     for item in dataset['feed']['entry']:
-        print(item['im:name']['label'])
         title_list.append(item['im:name']['label'])
-        print(item['im:artist']['label'])
         artist_list.append(item['im:artist']['label'])
-        print(item['im:releaseDate']['attributes']['label'])
         date_list.append(item['im:releaseDate']['attributes']['label'])
-        print(item['category']['attributes']['term'])
         genre_list.append(item['category']['attributes']['term'])
     
     return ('song', title_list, artist_list, date_list, genre_list)
@@ -52,16 +46,10 @@ def data_grab_album(dataset):
     date_list = []
     genre_list = []
 
-    print (type(dataset))
-
     for item in dataset['feed']['entry']:
-        print(item['im:name']['label'])
         title_list.append(item['im:name']['label'])
-        print(item['im:artist']['label'])
         artist_list.append(item['im:artist']['label'])
-        print(item['im:releaseDate']['label'])
         date_list.append(item['im:releaseDate']['label'])
-        print(item['category']['attributes']['term'])
         genre_list.append(item['category']['attributes']['term'])
     
     return ('album', title_list, artist_list, date_list, genre_list)
@@ -69,42 +57,87 @@ def data_grab_album(dataset):
 
 def create_table():
     conn, cur = db_setup()
-    cur.execute('''DROP TABLE IF EXISTS Songs''')
-    cur.execute('''CREATE TABLE Songs(id, title TEXT, artist TEXT, releaseDate TEXT, genre TEXT)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS Music(id, title TEXT, artist TEXT, releaseDate TEXT, genre TEXT)''')
     conn.commit()
-    conn.close()
 
-
-def db_fill(id, titles, artists, dates, genres):
-    #Access API with connection
-    ##Store 100 items in the database from your API 
-    #Each time you execute the code you must only store 25 or fewer items, 
-    # run the code multiple times to get 100 items total processed
-    
-    conn, cur = db_setup()
-    
-    rows = []
-
-    for i in range(len(titles)):
-        rows.append((id, titles[i], artists[i], dates[i], genres[i]))
-    
-    sql = '''INSERT INTO Songs(id, title, artist, releaseDate, genre) VALUES(?, ?, ?, ?, ?)'''
-
-    for row in rows:
-        cur.execute(sql, row)
-    
-    conn.commit()
-    conn.close()
+def db_count():
+        conn, cur = db_setup()
+        query = "SELECT * FROM Music"
+        cur.execute(query)
+        db_total = len(cur.fetchall())
+        return db_total
 
 def calc_top_from_category():
     conn, cur = db_setup()
-    query = '''SELECT COUNT(*)
-            FROM Songs
+    query = '''
+            SELECT COUNT(*)
+            FROM Music
             GROUP BY genre
             '''
-
+    
     data = cur.execute(query).fetchall()
-    return data
+    
+    pprint (data)
+    pass
+
+def db_fill_incremented():
+    conn, cur = db_setup()
+    query = "SELECT * FROM Music"
+    cur.execute(query)
+    db_total = len(cur.fetchall())
+
+    if db_total == 0:
+        rows = []
+
+        for i in range(0,25):
+            rows.append((data_grab_song(api_request(api_search2))[0],data_grab_song(api_request(api_search2))[1][i],data_grab_song(api_request(api_search2))[2][i],data_grab_song(api_request(api_search2))[3][i],data_grab_song(api_request(api_search2))[4][i]))
+    
+        sql = '''INSERT INTO Music(id, title, artist, releaseDate, genre) VALUES(?, ?, ?, ?, ?)'''
+
+        for row in rows:
+            cur.execute(sql, row)
+    
+            conn.commit()
+    
+    elif db_total == 25:
+        rows = []
+
+        for i in range(25,50):
+            rows.append((data_grab_song(api_request(api_search2))[0],data_grab_song(api_request(api_search2))[1][i],data_grab_song(api_request(api_search2))[2][i],data_grab_song(api_request(api_search2))[3][i],data_grab_song(api_request(api_search2))[4][i]))
+    
+        sql = '''INSERT INTO Music(id, title, artist, releaseDate, genre) VALUES(?, ?, ?, ?, ?)'''
+
+        for row in rows:
+            cur.execute(sql, row)
+    
+            conn.commit()
+
+    elif db_total == 50:
+        rows = []
+
+        for i in range(0,25):
+            rows.append((data_grab_album(api_request(api_search1))[0], data_grab_album(api_request(api_search1))[1][i], data_grab_album(api_request(api_search1))[2][i], data_grab_album(api_request(api_search1))[3][i], data_grab_album(api_request(api_search1))[4][i]))
+    
+        sql = '''INSERT INTO Music(id, title, artist, releaseDate, genre) VALUES(?, ?, ?, ?, ?)'''
+
+        for row in rows:
+            cur.execute(sql, row)
+    
+            conn.commit()
+
+    elif db_total == 75:
+        rows = []
+
+        for i in range(25,50):
+            rows.append((data_grab_album(api_request(api_search1))[0], data_grab_album(api_request(api_search1))[1][i], data_grab_album(api_request(api_search1))[2][i], data_grab_album(api_request(api_search1))[3][i], data_grab_album(api_request(api_search1))[4][i]))
+    
+        sql = '''INSERT INTO Music(id, title, artist, releaseDate, genre) VALUES(?, ?, ?, ?, ?)'''
+
+        for row in rows:
+            cur.execute(sql, row)
+    
+            conn.commit()      
+
 
 def make_plotly_graphic(genre = "None"):
     #Combine 2 tables in video game
@@ -130,9 +163,8 @@ Need a commin column (medium?) in each table stating whether this is a game, son
 def main():
     db_setup()
     create_table()
-    db_fill(data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[1], data_grab_song(api_request(api_search2))[2], data_grab_song(api_request(api_search2))[3], data_grab_song(api_request(api_search2))[4],)
-    db_fill(data_grab_album(api_request(api_search1))[0], data_grab_album(api_request(api_search1))[1], data_grab_album(api_request(api_search1))[2], data_grab_album(api_request(api_search1))[3], data_grab_album(api_request(api_search1))[4])
-
+    db_fill_incremented()
+    calc_top_from_category()
 
 
 if __name__ == "__main__":
