@@ -70,15 +70,13 @@ def db_count():
 def calc_top_from_category():
     conn, cur = db_setup()
     query = '''
-            SELECT COUNT(*)
+            SELECT COUNT(*), genre
             FROM Music
             GROUP BY genre
             '''
     
     data = cur.execute(query).fetchall()
-    
     pprint (data)
-    pass
 
 def db_fill_incremented():
     conn, cur = db_setup()
