@@ -85,12 +85,6 @@ def api_setup():
 
     )
 
-
-
- 
-
-
-
     return reddit
 
 
@@ -98,7 +92,6 @@ def api_setup():
 
 
 def set_conn():
-
     conn = sqlite3.connect('entertainment.db')
 
     cursor = conn.cursor()
@@ -113,7 +106,7 @@ def make_table():
 
     conn, c = set_conn()
 
-    c.execute('''CREATE TABLE IF NOT EXISTS movies(id INT PRIMARY KEY, title TEXT, genre TEXT,run_time TEXT, rating REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS movies(id INT PRIMARY KEY, title TEXT, run_time TEXT,genre TEXT, rating REAL)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT)''')
 
