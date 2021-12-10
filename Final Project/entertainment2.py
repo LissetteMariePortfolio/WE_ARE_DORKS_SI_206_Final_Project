@@ -1,3 +1,19 @@
+
+Conversation opened. 1 unread message.
+
+Skip to content
+Using University of Michigan Mail with screen readers
+2 of 17,320
+(no subject)
+Inbox
+
+Lissette Ramos <liramos@umich.edu>
+Attachments
+8:19 PM (2 minutes ago)
+to me
+
+
+Attachments area
 import praw
 import sqlite3
 import plotly.graph_objects as go
@@ -56,7 +72,7 @@ def set_conn():
 def make_table():
     conn, c = set_conn()
     c.execute('''CREATE TABLE IF NOT EXISTS movies(id INT PRIMARY KEY, title TEXT, genre TEXT,run_time TEXT, rating REAL)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT''')
+    c.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT)''')
     conn.commit()
     conn.close()
     return True
@@ -389,10 +405,9 @@ def make_data_dic(chosen_threads):
 
 def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
     counter = 0
-
+    id_number = 1
     for entry in range(0, len(first_data_dict["Titles"]) - 1):
-        sql_cursor.execute("INSERT INTO SubredditHot (id, content_type, Title, Upvotes, Comments) VALUES (?,?,?,?,?)", (id_number, "Reddit Post",
-                                                                                                                        first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
+        sql_cursor.execute("INSERT INTO SubredditHot (id,Title, Upvotes, Comments) VALUES (?,?,?,?)", (id_number, first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
         
 
         sql_connection.commit()
@@ -473,7 +488,7 @@ def main():
     makeSubredditTable(sql_connection, sql_cursor)
     hot_subreddit = access_api(sql_cursor, sql_connection, "movies", "badMovies", "Music", "kpop", api_prep)
     first_dictionary = make_data_dic(hot_subreddit)
-    
+    id_number = 0
     fill_table(sql_connection, sql_cursor, first_dictionary,id_number)
 
     make_plotly_graphic(sql_connection, sql_cursor)
@@ -487,3 +502,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+entertainment.py
+Displaying entertainment.py.
