@@ -1,18 +1,4 @@
 
-1 of 17,372
-new
-Inbox
-
-Lissette Ramos <liramos@umich.edu>
-Attachments
-5:10 PM (2 minutes ago)
-to me
-
-
-Attachments area
-Compose:
-Teammates are hard to be reach
-MinimizePop-outClose
 import praw
 import sqlite3
 import plotly.graph_objects as go
@@ -334,6 +320,6 @@ def main():
     primary_id = db_fill_incremented(primary_id)
     visualize(top_from_category())
     write_to_file()
-    make_a_join()
+    
 if __name__ == "__main__":
     main()
