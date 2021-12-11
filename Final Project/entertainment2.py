@@ -1,3 +1,18 @@
+
+1 of 17,372
+new
+Inbox
+
+Lissette Ramos <liramos@umich.edu>
+Attachments
+5:10 PM (2 minutes ago)
+to me
+
+
+Attachments area
+Compose:
+Teammates are hard to be reach
+MinimizePop-outClose
 import praw
 import sqlite3
 import plotly.graph_objects as go
@@ -35,83 +50,7 @@ def api_setup():
         user_agent="omegadorks"
     )
     return reddit
-def set_conn():
-    conn = sqlite3.connect('entertainment.db')
-    cursor = conn.cursor()
-    return conn, cursor
-def make_table():
-    conn, c = set_conn()
-    c.execute('''CREATE TABLE IF NOT EXISTS movies(id INT PRIMARY KEY, title TEXT, run_time TEXT,genre TEXT, rating REAL)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT)''')
-    conn.commit()
-    conn.close()
-    return True
-def get_db_count():
-    conn, c = set_conn()
-    c.execute("SELECT COUNT(*) from movies")
-    return c.fetchone()[0]
-def add_to_database(title, genre, run_time, rating):
-    conn, c = set_conn()
-    st = """INSERT INTO movies(title,run_time,genre,rating) VALUES (?,?,?,?)"""
-    data = (title, genre, run_time, rating)
-    c.execute(st, data)
-    conn.commit()
-    conn.close()
-    return True
-def api_bs_setup(url):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, "html.parser")
-    return soup
-def reach_api():
-    movies = []
-    for url in URLS:
-        soup = api_bs_setup(url)
-        res = soup.find(class_="lister-list")
-        for movie in res.find_all(class_="lister-item"):
-            title = movie.find(
-                class_="lister-item-content").find("a").text.strip()
-            genre = movie.find(class_="genre").text.strip()
-            r_t = movie.find(class_="runtime")
-            r_time = r_t.text.strip() if r_t else "0"
-            try:
-                rating = movie.find(
-                    class_="ratings-imdb-rating").find("strong").text.strip()
-            except:
-                rating = 0
-            movies.append([title, genre, r_time, rating])
-    count = get_db_count()
-    end_count = count+LIMIT
-    for i in movies[count:end_count]:
-        add_to_database(*i)
-def get_data():
-    conn, c = set_conn()
-    c.execute("SELECT * FROM movies")
-    return c.fetchall()
-def calc_top_from_category():
-    data = get_data()
-    genre = {}
-    for movie in data:
-        genres = movie[2]
-        for gen in genres.split(", "):
-            if gen in genre:
-                genre[gen] += 1
-            else:
-                genre[gen] = 1
-    return genre
-def make_graphic():
-    genre = calc_top_from_category()
-    print(type(genre))
-    pprint(genre)
-    fig = go.Figure(go.Bar(
-        y=list(genre.values()),
-        x=list(genre.keys()),
-        orientation='v'))
-    fig.show()
-def write_file():
-    data = calc_top_from_category()
-    with open("file.txt", "w") as file:
-        for movie in data.items():
-            file.write(f"{movie[0]} {movie[1]}\n")
+
 def db_setup():
     # Access API / Set up access
     # Set up database
@@ -184,7 +123,7 @@ def visualize(data):
     plt.legend(x, bbox_to_anchor=(-0.25, .75), loc="center left")
     plt.title('Distribution of Genres in iTunes Top 100')
     plt.show()
-def db_fill_incremented():
+def db_fill_incremented(id_number):
     conn, cur = db_setup()
     query = "SELECT * FROM Music"
     cur.execute(query)
@@ -235,41 +174,69 @@ def api_setup():
     )
     return reddit
 def set_up_database():
+    '''
+     No input, just making my sqlite cursor and connection objects for the
+     reddit API that then get used in the other reddit API functions
+
+    '''
     sql_connection = sqlite3.connect('entertainment.db')
     sql_cursor = sql_connection.cursor()
     return sql_connection, sql_cursor
-def makeSubredditTable(sql_connection, sql_cursor):
+def make_subreddit_table(sql_connection, sql_cursor):
+    '''
+    This creates the SubredditHot table (Posts are collected from the hot 
+    section of each subreddit accessed)
+    '''
     sql_cursor.execute(
         '''CREATE TABLE IF NOT EXISTS SubredditHot (id INTEGER PRIMARY KEY,Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
+    sql_connection.commit()
+    sql_cursor.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT)''')
     sql_connection.commit()
 # I want to join subreddit tables.
 # Make new function , use that to combine two categories
 # How to take
 def access_api(sql_cursor, sql_connection, first_sub_reddit, second_sub_reddit, third_sub_reddit, fourth_sub_reddit, reddit):
+    '''
+    It takes in the sqlite objects, the names of the four subreddits we want
+    to get data from, and the reddit API object. What it does is it will count
+    how many rows are in the SubredditHot table currently. Depending on how
+    many entries there are, that determines which subreddit to draw 25 posts
+    from. It then changes the id number to the first number in that
+    corresponding range of numbers. The 25 posts and id number is returned
+    '''
+    
     sql_cursor.execute("SELECT * FROM SubredditHot")
     numb_of_entries = len(sql_cursor.fetchall())
     sql_connection.commit()
+    id_number = 0
+    current_subreddit = ""
     if numb_of_entries == 0:
-        subreddit_name = first_sub_reddit
+       
         current_subreddit = reddit.subreddit(first_sub_reddit)
-        id_number = 320
-    if numb_of_entries == 25:
-        subreddit_name = second_sub_reddit
-        current_subreddit = reddit.subreddit(second_sub_reddit)
-        id_number = 346
+        id_number = 1
     if numb_of_entries == 50:
-        subreddit_name = third_sub_reddit
+        
+        current_subreddit = reddit.subreddit(second_sub_reddit)
+        id_number = 51
+    if numb_of_entries == 100:
+        #25 50 75 100 125 150 175 200
+        
         current_subreddit = reddit.subreddit(third_sub_reddit)
-        id_number = 372
-    if numb_of_entries == 75:
-        subreddit_name = fourth_sub_reddit
+        id_number = 101
+    if numb_of_entries == 150:
+        
         current_subreddit = reddit.subreddit(fourth_sub_reddit)
-        id_number = 397
+        id_number = 151
         # zip file for github?
     hot_threads = current_subreddit.hot(limit=26)
     # Alright, so now our API is set up to populate properly!!
     return hot_threads, id_number
 def make_data_dic(chosen_threads):
+    '''
+     This takes the set of 25 posts and  makes a dictionary with the   wanted 
+     data by accessing each post object and returns that dictionary.
+
+    '''
     title = []
     upvote_totals = []
     comment_totals = []
@@ -283,10 +250,21 @@ def make_data_dic(chosen_threads):
     data_dict["Comment Totals"] = comment_totals
     return data_dict
 def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
+    '''
+    Given the sqlite objects so you can use the data from the dictionary to
+    insert the needed data of each post into the database, ensuring the proper
+    id number is used according to where the post lies in the dictionary
+    (see make_data_dic). This then finds the average number of upvotes and
+    number of comments each post in the database so far received and prints
+    them out. 
+    '''
     counter = 0
     for entry in range(0, len(first_data_dict["Titles"]) - 1):
         sql_cursor.execute("INSERT INTO SubredditHot (id,Title, Upvotes, Comments) VALUES (?,?,?,?)", (id_number, first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
         sql_connection.commit()
+        sql_cursor.execute("INSERT INTO EntertainmentLogistics(id, media_type) VALUES (?,?)", (id_number, "Reddit Post"))
+        sql_connection.commit()
+        
         counter += 1
         id_number += 1
     sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
@@ -308,6 +286,10 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
     print("The average number of comments per post amongst all four subreddits is " + 
             str(int(avg_comments)))
 def make_plotly_graphic(sql_connection, sql_cursor):
+    '''
+    Used the Reddit API SQL objects to make a graph to show the correlation
+    between the number of upvotes and reddit comment
+    '''
     sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
     subreddit_upvotes = sql_cursor.fetchall()
     sql_connection.commit()
@@ -335,25 +317,23 @@ def make_plotly_graphic(sql_connection, sql_cursor):
         )
     )
     plot.update_yaxes(range=[0, 600])
+    plot.update_xaxes(range=[0, 600])
     plot.update_traces(marker=dict(color='red'))
     plot.show()
 def main():
-    primary_id = 0
-    make_table()
-    reach_api()
-    make_graphic()
-    write_file()
+    primary_id = 1
     api_prep = api_setup()
     sql_connection, sql_cursor = set_up_database()
-    makeSubredditTable(sql_connection, sql_cursor)
-    hot_subreddit, id_number = access_api(sql_cursor, sql_connection, "movies", "badMovies", "Music", "kpop", api_prep)
+    make_subreddit_table(sql_connection, sql_cursor)
+    hot_subreddit, primary_id = access_api(sql_cursor, sql_connection, "movies", "badMovies", "Music", "kpop", api_prep)
     first_dictionary = make_data_dic(hot_subreddit)
-    fill_table(sql_connection, sql_cursor, first_dictionary,id_number)
+    fill_table(sql_connection, sql_cursor, first_dictionary,primary_id)
     make_plotly_graphic(sql_connection, sql_cursor)
     db_setup()
     create_table()
-    db_fill_incremented()
+    primary_id = db_fill_incremented(primary_id)
     visualize(top_from_category())
     write_to_file()
+    make_a_join()
 if __name__ == "__main__":
     main()
