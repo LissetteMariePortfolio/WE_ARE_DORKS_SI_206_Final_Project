@@ -1,4 +1,3 @@
-
 import praw
 import sqlite3
 import plotly.graph_objects as go
@@ -80,11 +79,14 @@ def create_table():
 def db_count(database):
     conn, cur = db_setup()
     query = "SELECT * FROM " + database
+    print(query)
     cur.execute(query)
     db_total = len(cur.fetchall())
+    print(db_total)
     return db_total
 def top_from_category():
     conn, cur = db_setup()
+   
     query = '''
             SELECT COUNT(*), genre
             FROM Music
@@ -118,19 +120,23 @@ def db_fill_incremented():
     if db_total == 0:
         rows = []
         log_rows = []
+        current_id = db_count('EntertainmentLogistics')
         for i in range(0,25):
-            current_id = db_count('EntertainmentLogistics') + 1
+            
+            current_id += 1
             sql = '''INSERT INTO EntertainmentLogistics(id, media_type, genre) VALUES(?,?,?)'''
-            log_rows.append((current_id,(data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i])))
-        for row in log_rows:
-            cur.execute(sql, row)
-            conn.commit()
-        for i in range(0, 25):
-            rows.append((data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[1][i], data_grab_song(
+            log_rows.append((current_id,data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i]))
+            
+       
+            cur.execute(sql, (current_id,data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i]))
+            conn.commit() 
+            
+            rows.append((current_id, data_grab_song(api_request(api_search2))[1][i], data_grab_song(
                 api_request(api_search2))[2][i], data_grab_song(api_request(api_search2))[3][i]))
-        sql = '''INSERT INTO Music(id, title, artist, price) VALUES(?, ?, ?, ?)'''
-        for row in rows:
-            cur.execute(sql, row)
+            sql = '''INSERT INTO Music(id, title, artist, price) VALUES(?, ?, ?, ?)'''
+       
+            cur.execute(sql,(current_id, data_grab_song(api_request(api_search2))[1][i], data_grab_song(
+                api_request(api_search2))[2][i], data_grab_song(api_request(api_search2))[3][i]))
             conn.commit()
 
     elif db_total == 25:
@@ -139,7 +145,7 @@ def db_fill_incremented():
         for i in range(25,50):
             current_id = db_count('EntertainmentLogistics') + 1
             sql = '''INSERT INTO EntertainmentLogistics(id, media_type, genre) VALUES(?,?,?)'''
-            log_rows.append(current_id,(data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i]))
+            log_rows.append(current_id,data_grab_song(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i])
         for row in log_rows:
             cur.execute(sql, row)
             conn.commit()
@@ -175,7 +181,7 @@ def db_fill_incremented():
         for i in range(25,50):
             current_id = db_count('EntertainmentLogistics') + 1
             sql = '''INSERT INTO EntertainmentLogistics(id, media_type, genre) VALUES(?,?,?)'''
-            log_rows.append(current_id,(data_grab_album(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i]))
+            log_rows.append(current_id,data_grab_album(api_request(api_search2))[0], data_grab_song(api_request(api_search2))[4][i])
         for row in log_rows:
             cur.execute(sql, row)
             conn.commit()
@@ -232,6 +238,7 @@ def access_api(sql_cursor, sql_connection, first_sub_reddit, second_sub_reddit, 
     numb_of_entries = len(sql_cursor.fetchall())
     sql_connection.commit()
     id_number = 0
+    
     current_subreddit = ""
     if numb_of_entries == 0:
        
@@ -284,7 +291,7 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
     counter = 0
     for entry in range(0, len(first_data_dict["Titles"]) - 1):
         sql_cursor.execute("INSERT INTO SubredditHot (id,Title, Upvotes, Comments) VALUES (?,?,?,?)", (id_number, first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
-        sql_connection.commit()
+        sql_connection.commit() 
         sql_cursor.execute("INSERT INTO EntertainmentLogistics(id, media_type) VALUES (?,?)", (id_number, "Reddit Post"))
         sql_connection.commit()
         
@@ -327,7 +334,7 @@ def make_plotly_graphic(sql_connection, sql_cursor):
     plot = go.Figure(data=[go.Scatter(
         x=upvote_numbers,
         y=comment_totals,
-        mode="markers",)
+        mode="markers",) 
     ])
     plot.update_layout(
         title="Comparison of Number of Upvotes Compared To Number Of Comments",
@@ -356,8 +363,9 @@ def main():
     db_setup()
     create_table()
     db_fill_incremented()
-    visualize(top_from_category())
-    write_to_file()
+    #visualize(top_from_category())
+    #write_to_file()
 
 if __name__ == "__main__":
     main()
+entertainment.py
