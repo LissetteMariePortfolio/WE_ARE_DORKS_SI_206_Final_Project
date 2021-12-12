@@ -1,4 +1,3 @@
-
 import praw
 import sqlite3
 import plotly.graph_objects as go
@@ -151,6 +150,10 @@ def db_fill_incremented(id_number):
             cur.execute(sql, row)
             conn.commit()
 def api_setup():
+    '''
+    Using my LogIn credentials to create a reddit object that allows the 
+    collection of data from reddit via it's API
+    '''
     reddit = praw.Reddit(
         client_id="wtbjFJwLxqFu2-iC9JOqIg",
         client_secret="kKtX_A560IxAEGUVpe1woVJxaEn9TA",
@@ -159,6 +162,7 @@ def api_setup():
         user_agent="omegadorks"
     )
     return reddit
+
 def set_up_database():
     '''
      No input, just making my sqlite cursor and connection objects for the
@@ -168,6 +172,7 @@ def set_up_database():
     sql_connection = sqlite3.connect('entertainment.db')
     sql_cursor = sql_connection.cursor()
     return sql_connection, sql_cursor
+
 def make_subreddit_table(sql_connection, sql_cursor):
     '''
     This creates the SubredditHot table (Posts are collected from the hot 
@@ -176,11 +181,12 @@ def make_subreddit_table(sql_connection, sql_cursor):
     sql_cursor.execute(
         '''CREATE TABLE IF NOT EXISTS SubredditHot (id INTEGER PRIMARY KEY,Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
     sql_connection.commit()
-    sql_cursor.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INT PRIMARY KEY,media_type TEXT)''')
+    sql_cursor.execute('''CREATE TABLE IF NOT EXISTS EntertainmentLogistics(id INTEGER PRIMARY KEY,media_type TEXT, genre TEXT)''')
     sql_connection.commit()
 # I want to join subreddit tables.
 # Make new function , use that to combine two categories
 # How to take
+
 def access_api(sql_cursor, sql_connection, first_sub_reddit, second_sub_reddit, third_sub_reddit, fourth_sub_reddit, reddit):
     '''
     It takes in the sqlite objects, the names of the four subreddits we want
@@ -200,16 +206,16 @@ def access_api(sql_cursor, sql_connection, first_sub_reddit, second_sub_reddit, 
        
         current_subreddit = reddit.subreddit(first_sub_reddit)
         id_number = 1
-    if numb_of_entries == 50:
+    if numb_of_entries == 25:
         
         current_subreddit = reddit.subreddit(second_sub_reddit)
         id_number = 51
-    if numb_of_entries == 100:
-        #25 50 75 100 125 150 175 200
+    if numb_of_entries == 50:
+        #25  75  125  175 
         
         current_subreddit = reddit.subreddit(third_sub_reddit)
         id_number = 101
-    if numb_of_entries == 150:
+    if numb_of_entries == 75:
         
         current_subreddit = reddit.subreddit(fourth_sub_reddit)
         id_number = 151
@@ -217,12 +223,14 @@ def access_api(sql_cursor, sql_connection, first_sub_reddit, second_sub_reddit, 
     hot_threads = current_subreddit.hot(limit=26)
     # Alright, so now our API is set up to populate properly!!
     return hot_threads, id_number
+
 def make_data_dic(chosen_threads):
     '''
-     This takes the set of 25 posts and  makes a dictionary with the   wanted 
+     This takes the set of 25 posts and  makes a dictionary with the wanted 
      data by accessing each post object and returns that dictionary.
 
     '''
+    
     title = []
     upvote_totals = []
     comment_totals = []
@@ -244,6 +252,7 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
     number of comments each post in the database so far received and prints
     them out. 
     '''
+    
     counter = 0
     for entry in range(0, len(first_data_dict["Titles"]) - 1):
         sql_cursor.execute("INSERT INTO SubredditHot (id,Title, Upvotes, Comments) VALUES (?,?,?,?)", (id_number, first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
@@ -253,59 +262,82 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, id_number):
         
         counter += 1
         id_number += 1
-    sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
-    all_upvotes = sql_cursor.fetchall()
-    sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM SubredditHot")   
-    all_comments = sql_cursor.fetchall()
-    sql_connection.commit()
-    total_upvotes = 0
-    total_comments = 0
-    for row in all_upvotes:
-        total_upvotes += row[0]
-    for row in all_comments:
-        total_comments += row[0]
-    avg_upvotes = total_upvotes / 100
-    avg_comments = total_comments / 100
-    print("The average number of upvotes per post amongst all four subreddits is " + 
-            str(int(avg_upvotes)))
-    print("The average number of comments per post amongst all four subreddits is " + 
-            str(int(avg_comments)))
+    
+    current_size = db_count("SubredditHot")
+    if current_size == 100:    
+        sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
+        all_upvotes = sql_cursor.fetchall()
+        sql_connection.commit()
+        sql_cursor.execute("SELECT Comments FROM SubredditHot")   
+        all_comments = sql_cursor.fetchall()
+        sql_connection.commit()
+        total_upvotes = 0
+        total_comments = 0
+        for row in all_upvotes:
+            total_upvotes += row[0]
+        for row in all_comments:
+            total_comments += row[0]
+        avg_upvotes = total_upvotes / 100
+        avg_comments = total_comments / 100
+        print("The average number of upvotes per post amongst all four subreddits is " + 
+                str(int(avg_upvotes)))
+        print("The average number of comments per post amongst all four subreddits is " + 
+                str(int(avg_comments)))
+
 def make_plotly_graphic(sql_connection, sql_cursor):
     '''
     Used the Reddit API SQL objects to make a graph to show the correlation
-    between the number of upvotes and reddit comment
+    between the number of upvotes and reddit comment. This happens once we 
+    have 100 entries
     '''
-    sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
-    subreddit_upvotes = sql_cursor.fetchall()
-    sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM SubredditHot")
-    subreddit_comments = sql_cursor.fetchall()
-    sql_connection.commit()
-    upvote_numbers = []
-    comment_totals = []
-    for numb in range(0, len(subreddit_comments) - 1):
-        upvote_numbers.append(subreddit_upvotes[numb][0])
-        comment_totals.append(subreddit_comments[numb][0])
-    plot = go.Figure(data=[go.Scatter(
-        x=upvote_numbers,
-        y=comment_totals,
-        mode="markers",)
-    ])
-    plot.update_layout(
-        title="Comparison of Number of Upvotes Compared To Number Of Comments",
-        xaxis_title="Number of Upvotes",
-        yaxis_title="Number Of Comments",
-        font=dict(
-            family="Courier New, monospace",
-            size=18,
-            color="#7f7f7f"
+
+    current_size = db_count("SubredditHot")
+    if current_size == 100:
+        sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
+        subreddit_upvotes = sql_cursor.fetchall()
+        sql_connection.commit()
+        sql_cursor.execute("SELECT Comments FROM SubredditHot")
+        subreddit_comments = sql_cursor.fetchall()
+        sql_connection.commit()
+        upvote_numbers = []
+        comment_totals = []
+        for numb in range(0, len(subreddit_comments) - 1):
+            upvote_numbers.append(subreddit_upvotes[numb][0])
+            comment_totals.append(subreddit_comments[numb][0])
+        plot = go.Figure(data=[go.Scatter(
+            x=upvote_numbers,
+            y=comment_totals,
+            mode="markers",)
+        ])
+        plot.update_layout(
+            title="Comparison of Number of Upvotes Compared To Number Of Comments",
+            xaxis_title="Number of Upvotes",
+            yaxis_title="Number Of Comments",
+            font=dict(
+                family="Courier New, monospace",
+                size=18,
+                color="#7f7f7f"
+            )
         )
-    )
-    plot.update_yaxes(range=[0, 600])
-    plot.update_xaxes(range=[0, 600])
-    plot.update_traces(marker=dict(color='red'))
-    plot.show()
+        plot.update_yaxes(range=[0, 600])
+        plot.update_xaxes(range=[0, 600])
+        plot.update_traces(marker=dict(color='red'))
+        plot.show()
+def media_types(sql_connection, sql_cursor):
+    
+    
+    sql_cursor("SELECT SubredditHot.Title, EntertainmentLogistics.media_type FROM SubredditHot INNER JOIN EntertainmentLogistics ON SubredditHot.id = EntertainmentLogistics.id")
+    sql_connection.commit()
+    reddit_pairings = sql_cursor.fetchall()
+    sql_cursor("SELECT Music.title, EntertainmentLogistics.media_type, EntertainmentLogistics.genre FROM Music INNER JOIN EntertainmentLogistics ON music.id = EntertainmentLogistics.id")
+    sql_connection.commit()
+    music_pairings = sql_cursor.fetchall()
+    #Uncomment below if you wish to see the results of the selection query
+    ''' 
+    for pairing in range(0,len(reddit_pairings) - 1):
+        print(reddit_pairings[pairing])
+        print(music_pairings[pairing])
+    '''
 def main():
     primary_id = 1
     api_prep = api_setup()
@@ -320,6 +352,7 @@ def main():
     primary_id = db_fill_incremented(primary_id)
     visualize(top_from_category())
     write_to_file()
+    media_types(sql_connection, sql_cursor)
     
 if __name__ == "__main__":
     main()
