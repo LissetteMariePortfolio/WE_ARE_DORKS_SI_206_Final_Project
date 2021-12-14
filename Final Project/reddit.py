@@ -5,7 +5,7 @@ import sqlite3
 import plotly.graph_objects as go
 import csv
 
-
+#THIS IS  THE FILE!!
 
 def api_setup():
     reddit = praw.Reddit(
@@ -25,12 +25,11 @@ def set_up_database():
 
 
 def makeSubredditTable(sql_connection, sql_cursor):
-    sql_cursor.execute("DROP TABLE IF EXISTS FirstSubreddit")
-    sql_cursor.execute("DROP TABLE IF EXISTS SecondSubreddit")
+    
     sql_cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS FirstSubreddit (id INTEGER PRIMARY KEY, content_type TEXT, Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
+        '''CREATE TABLE IF NOT EXISTS SubredditHot (id INTEGER PRIMARY KEY, content_type TEXT, Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
     sql_cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS SecondSubreddit (id INTEGER PRIMARY KEY, content_type TEXT, Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
+        '''CREATE TABLE IF NOT EXISTS SubredditNew (id INTEGER PRIMARY KEY, content_type TEXT, Title TEXT, Upvotes INTEGER, Comments INTEGER)''')
 
     sql_connection.commit()
    
@@ -39,14 +38,35 @@ def makeSubredditTable(sql_connection, sql_cursor):
 # Make new function , use that to combine two categories
 # How to take
 
-def access_api(first_sub_reddit, second_sub_reddit, reddit):
-
-    first_subreddit = reddit.subreddit(first_sub_reddit)
-    second_subreddit = reddit.subreddit(second_sub_reddit)
-    first_chosen_threads = first_subreddit.hot(limit=25)
-    second_chosen_threads = second_subreddit.hot(limit=25)
-
-    return first_chosen_threads, second_chosen_threads
+def access_api(sql_cursor,sql_connection,first_sub_reddit, second_sub_reddit,third_sub_reddit,fourth_sub_reddit, reddit):
+    sql_cursor.execute("SELECT * FROM SubredditHot")
+    numb_of_entries = len(sql_cursor.fetchall())
+    sql_connection.commit()
+    subreddit_name = ""
+    id_number= 320
+    if numb_of_entries == 0:
+        subreddit_name = first_sub_reddit
+        current_subreddit = reddit.subreddit(first_sub_reddit)
+        id_number = 320
+    if numb_of_entries == 25:
+        subreddit_name = second_sub_reddit
+        current_subreddit = reddit.subreddit(second_sub_reddit) 
+        id_number = 346
+    if numb_of_entries == 50:
+        subreddit_name = third_sub_reddit
+        current_subreddit = reddit.subreddit(third_sub_reddit)   
+        id_number = 372
+    if numb_of_entries == 75:
+        subreddit_name = fourth_sub_reddit
+        current_subreddit = reddit.subreddit(fourth_sub_reddit) 
+        id_number = 397
+        #zip file for github?
+        
+        
+    hot_threads = current_subreddit.hot(limit=26)
+    new_threads = current_subreddit.new(limit=26)
+    #Alright, so now our API is set up to populate properly!!
+    return hot_threads, new_threads,subreddit_name, id_number
 
 
 def make_data_dic(chosen_threads):
@@ -57,6 +77,7 @@ def make_data_dic(chosen_threads):
         title.append(submission.title)
         upvote_totals.append(submission.ups)
         comment_totals.append(len(submission.comments.list()))
+        
     data_dict = {}
     data_dict["Titles"] = title
     data_dict["Upvote Totals"] = upvote_totals
@@ -65,80 +86,65 @@ def make_data_dic(chosen_threads):
     return data_dict
 
 
-def fill_table(sql_connection, sql_cursor, first_data_dict, second_data_dict, first_sub_reddit, second_sub_reddit):
+def fill_table(sql_connection, sql_cursor, first_data_dict, second_data_dict, subreddit_name, id_number):
     counter = 0
 
-    id_numbs = 320
+    
 
     for entry in range(0, len(first_data_dict["Titles"]) - 1):
-        sql_cursor.execute("INSERT INTO FirstSubreddit (id, content_type, Title, Upvotes, Comments) VALUES (?,?,?,?,?)", (id_numbs, "Reddit Post",
+        sql_cursor.execute("INSERT INTO SubredditHot (id, content_type, Title, Upvotes, Comments) VALUES (?,?,?,?,?)", (id_number, "Reddit Post",
                                                                                                                           first_data_dict["Titles"][counter], first_data_dict["Upvote Totals"][counter], first_data_dict["Comment Totals"][counter]))
-        sql_cursor.execute("INSERT INTO SecondSubreddit (id, content_type, Title, Upvotes, Comments) VALUES (?,?,?,?,?)", (id_numbs, "Reddit Post",
+        sql_cursor.execute("INSERT INTO SubredditNew (id, content_type, Title, Upvotes, Comments) VALUES (?,?,?,?,?)", (id_number, "Reddit Post",
                                                                                                                            second_data_dict["Titles"][counter], second_data_dict["Upvote Totals"][counter], second_data_dict["Comment Totals"][counter]))
 
         sql_connection.commit()
         counter += 1
-        id_numbs += 1
+        id_number += 1
     
-    sql_cursor.execute("SELECT Upvotes FROM FirstSubreddit")
-    first_upvotes = sql_cursor.fetchall()
-    sql_connection.commit()
-    sql_cursor.execute("SELECT Upvotes FROM SecondSubreddit")
-    second_upvotes = sql_cursor.fetchall()
-    sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM FirstSubreddit")
-    first_comments = sql_cursor.fetchall()
-    sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM SecondSubreddit")
-    second_comments = sql_cursor.fetchall()
-    sql_connection.commit()
-    first_total_upvotes = 0
-    first_total_comments = 0
-    second_total_upvotes = 0
-    second_total_comments = 0
-    first_avg_upvotes = 0
-    first_avg_comments = 0
-    second_avg_upvotes = 0
-    second_avg_comments = 0
-    for row in first_upvotes:
-        first_total_upvotes += row[0]
-    for row in first_comments:
-        first_total_comments += row[0]  
-    for row in second_upvotes:
-        second_total_upvotes += row[0] 
-    for row in second_comments:
-        second_total_comments += row[0] 
-    first_avg_upvotes = first_total_upvotes / counter
-    first_avg_comments = first_total_comments / counter
-    second_avg_upvotes = second_total_upvotes = second_total_upvotes / counter
-    second_avg_comments = second_total_comments / counter
-    first_upvote_line = "The average number of upvotes of the top 25 posts in " +  first_sub_reddit + " is " + str(int(first_avg_upvotes))
-    first_comment_line = "The average number of comments of the top 25 posts in " +  first_sub_reddit + " is " + str(int(first_avg_comments))
-    second_upvote_line = "The average number of upvotes of the top 25 posts in " +  second_sub_reddit + " is " + str(int(second_avg_upvotes))
-    second_comment_line = "The average number of comments of the top 25 posts in " +  second_sub_reddit + " is " + str(int(second_avg_comments))
-
-    file_line_list = [first_upvote_line,first_comment_line,second_upvote_line,second_comment_line]
+    sql_cursor.execute("SELECT * FROM SubredditHot")
+    table_view = sql_cursor.fetchall()
+    entry_numb = len(table_view)
+    if entry_numb == 100:
+        sql_cursor.execute("SELECT SubredditHot.Upvotes, SubredditNew.Upvotes FROM SubredditHot INNER JOIN SubredditNew ON SubredditHot.id = SubredditNew.id ")
+        all_upvotes = sql_cursor.fetchall()
+        sql_connection.commit()
+        sql_cursor.execute("SELECT SubredditHot.Comments, SubredditNew.Comments FROM SubredditHot INNER JOIN SubredditNew ON SubredditHot.id = SubredditNew.id ")
+        all_comments = sql_cursor.fetchall()
+        sql_connection.commit()
+        total_upvotes = 0
+        total_comments = 0
+        for row in all_upvotes:
+            total_upvotes += row[0]
+        for row in all_comments:
+            total_comments += row[0]  
+    
+        avg_upvotes = total_upvotes / 100
+        avg_comments = total_comments / 100
+    
+        upvote_line = "The average number of upvotes per post amongst all four subreddits is " + str(int(avg_upvotes))
+        comment_line = "The average number of comments per post amongst all four subreddits is " + str(int(avg_comments))
+        file_line_list = [upvote_line,comment_line]
     
     
-    with open('reddit.csv', 'w') as reddit_csv:
-        for statement in file_line_list:
-            reddit_csv.write(statement)
-            reddit_csv.write("\n")
+        with open('reddit.csv', 'w') as reddit_csv:
+            for statement in file_line_list:
+                reddit_csv.write(statement)
+                reddit_csv.write("\n")
 
 
 
 
 def make_plotly_graphic(sql_connection, sql_cursor):
-    sql_cursor.execute("SELECT Upvotes FROM FirstSubreddit")
+    sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
     first_subreddit_upvotes = sql_cursor.fetchall()
     sql_connection.commit()
-    sql_cursor.execute("SELECT Upvotes FROM SecondSubreddit")
+    sql_cursor.execute("SELECT Upvotes FROM SubredditNew")
     second_subreddit_upvotes = sql_cursor.fetchall()
     sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM FirstSubreddit")
+    sql_cursor.execute("SELECT Comments FROM SubredditHot")
     first_subreddit_comments = sql_cursor.fetchall()
     sql_connection.commit()
-    sql_cursor.execute("SELECT Comments FROM SecondSubreddit")
+    sql_cursor.execute("SELECT Comments FROM SubredditNew")
     second_subreddit_comments = sql_cursor.fetchall()
     sql_connection.commit()
     all_upvotes = first_subreddit_upvotes + second_subreddit_upvotes
@@ -154,24 +160,31 @@ def make_plotly_graphic(sql_connection, sql_cursor):
     mode = "markers",) 
     
     ])
+    plot.update_layout(
+    title="Comparison of Number of Upvotes Compared To Number Of Comments",
+    xaxis_title="Number of Upvotes",
+    yaxis_title="Number Of Comments",
+    font=dict(
+        family="Courier New, monospace",
+        size=18,
+        color="#7f7f7f"
+    )
+)
     plot.update_yaxes(range=[0,600])
     plot.update_traces(marker=dict(color='red'))
     plot.show()
     
 
-# Tentative Deadline December 5th for code
 
 
 def main():
     api_prep = api_setup()
     sql_connection, sql_cursor = set_up_database()
     makeSubredditTable(sql_connection, sql_cursor)
-
-    first_subreddit, second_subreddit = access_api("uofm", "anime", api_prep)
-    first_dictionary = make_data_dic(first_subreddit)
-    second_dictionary = make_data_dic(second_subreddit)
-
-    fill_table(sql_connection, sql_cursor, first_dictionary, second_dictionary, "/r/uofm", "/r/anime")
+    hot_subreddit, new_subreddit,subreddit_name, id_number = access_api(sql_cursor,sql_connection,"movies", "badMovies","Music", "kpop", api_prep)
+    first_dictionary = make_data_dic(hot_subreddit)
+    second_dictionary = make_data_dic(new_subreddit)
+    fill_table(sql_connection, sql_cursor, first_dictionary, second_dictionary,subreddit_name, id_number)
     
     
     
@@ -181,7 +194,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-'''
-Notes:
-Need a commin column (medium?) in each table stating whether this is a game, song, or movie
-'''
+
