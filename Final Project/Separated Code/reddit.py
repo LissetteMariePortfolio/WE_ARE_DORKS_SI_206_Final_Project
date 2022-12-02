@@ -1,12 +1,12 @@
+#This is part of a group project, this reddit code was made entirely by me, Lissette Ramos
 
-
-import praw
-import sqlite3
-import plotly.graph_objects as go
+import praw # Python Reddit API Wrapper
+import sqlite3 # SQL usage within Python
+import plotly.graph_objects as go # Let's me make charts via Python
 import csv
 
-#THIS IS  THE FILE!!
 
+# Set up the API. use user account credentials are needed in case I wanted to upvote or comment in a thread 
 def api_setup():
     reddit = praw.Reddit(
         client_id="wtbjFJwLxqFu2-iC9JOqIg",
@@ -16,13 +16,14 @@ def api_setup():
         user_agent="omegadorks"
     )
     return reddit
-
+# Setting up database and SQL objects
 
 def set_up_database():
     sql_connection = sqlite3.connect('reddit.db')
     sql_cursor = sql_connection.cursor()
     return sql_connection, sql_cursor
 
+# Making tables during first run through 
 
 def makeSubredditTable(sql_connection, sql_cursor):
     
@@ -34,41 +35,39 @@ def makeSubredditTable(sql_connection, sql_cursor):
     sql_connection.commit()
    
 
-# I want to join subreddit tables.
-# Make new function , use that to combine two categories
-# How to take
-
+# There are four subreddit groups entered into the function, the hot and new threads of two subreddits. Each of the four groups will have the top 25 threads currently
+# in that category into the database ait the id number incremented and appended accordingly
 def access_api(sql_cursor,sql_connection,first_sub_reddit, second_sub_reddit,third_sub_reddit,fourth_sub_reddit, reddit):
     sql_cursor.execute("SELECT * FROM SubredditHot")
     numb_of_entries = len(sql_cursor.fetchall())
     sql_connection.commit()
     subreddit_name = ""
-    id_number= 320
+    id_number= 1
     if numb_of_entries == 0:
         subreddit_name = first_sub_reddit
         current_subreddit = reddit.subreddit(first_sub_reddit)
-        id_number = 320
+        id_number = 1
     if numb_of_entries == 25:
         subreddit_name = second_sub_reddit
         current_subreddit = reddit.subreddit(second_sub_reddit) 
-        id_number = 346
+        id_number = 26
     if numb_of_entries == 50:
         subreddit_name = third_sub_reddit
         current_subreddit = reddit.subreddit(third_sub_reddit)   
-        id_number = 372
+        id_number = 51
     if numb_of_entries == 75:
         subreddit_name = fourth_sub_reddit
         current_subreddit = reddit.subreddit(fourth_sub_reddit) 
-        id_number = 397
+        id_number = 76
         #zip file for github?
         
         
     hot_threads = current_subreddit.hot(limit=26)
     new_threads = current_subreddit.new(limit=26)
-    #Alright, so now our API is set up to populate properly!!
+    
     return hot_threads, new_threads,subreddit_name, id_number
 
-
+# Data dictionaries are made, filled with the number of upvote and number of comments to put in the SQL database tables 
 def make_data_dic(chosen_threads):
     title = []
     upvote_totals = []
@@ -85,7 +84,7 @@ def make_data_dic(chosen_threads):
 
     return data_dict
 
-
+# Dictionaries used to fill tables
 def fill_table(sql_connection, sql_cursor, first_data_dict, second_data_dict, subreddit_name, id_number):
     counter = 0
 
@@ -111,6 +110,7 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, second_data_dict, su
         sql_cursor.execute("SELECT SubredditHot.Comments, SubredditNew.Comments FROM SubredditHot INNER JOIN SubredditNew ON SubredditHot.id = SubredditNew.id ")
         all_comments = sql_cursor.fetchall()
         sql_connection.commit()
+       # Average of number of comments and upvotes of different threads taken and entered into a file
         total_upvotes = 0
         total_comments = 0
         for row in all_upvotes:
@@ -125,14 +125,14 @@ def fill_table(sql_connection, sql_cursor, first_data_dict, second_data_dict, su
         comment_line = "The average number of comments per post amongst all four subreddits is " + str(int(avg_comments))
         file_line_list = [upvote_line,comment_line]
     
-    
+       
         with open('reddit.csv', 'w') as reddit_csv:
             for statement in file_line_list:
                 reddit_csv.write(statement)
                 reddit_csv.write("\n")
 
 
-
+# Graphs made to observe the relation of number of upvotes and number of comments in a post
 
 def make_plotly_graphic(sql_connection, sql_cursor):
     sql_cursor.execute("SELECT Upvotes FROM SubredditHot")
@@ -175,7 +175,7 @@ def make_plotly_graphic(sql_connection, sql_cursor):
     plot.show()
     
 
-
+# Driver, Vroom vroom
 
 def main():
     api_prep = api_setup()
