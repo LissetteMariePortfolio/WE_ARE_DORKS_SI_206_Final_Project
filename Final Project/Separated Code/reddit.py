@@ -175,7 +175,7 @@ def make_plotly_graphic(sql_connection, sql_cursor):
     plot.show()
     
 
-# Driver, Vroom vroom
+# Driver
 
 def main():
     api_prep = api_setup()
