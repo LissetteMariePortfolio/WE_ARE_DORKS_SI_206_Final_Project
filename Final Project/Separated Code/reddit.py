@@ -11,8 +11,8 @@ def api_setup():
     reddit = praw.Reddit(
         client_id="wtbjFJwLxqFu2-iC9JOqIg",
         client_secret="kKtX_A560IxAEGUVpe1woVJxaEn9TA",
-        username="StardustNyako",
-        password="22ruM@yu5h!!D35u",
+        username="",#Put in a valid Reddit username
+        password="",#Put in a valid Reddit password
         user_agent="omegadorks"
     )
     return reddit
