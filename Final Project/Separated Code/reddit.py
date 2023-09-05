@@ -6,7 +6,7 @@ import plotly.graph_objects as go # Let's me make charts via Python
 import csv
 
 
-# Set up the API. use user account credentials are needed in case I wanted to upvote or comment in a thread 
+# Set up the API.  user account credentials are needed in case you want to make changes on the reddit site 
 def api_setup():
     reddit = praw.Reddit(
         client_id="wtbjFJwLxqFu2-iC9JOqIg",
